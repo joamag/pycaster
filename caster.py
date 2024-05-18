@@ -34,7 +34,6 @@ world_map = [
 player_x = 8.0
 player_y = 10.0
 player_angle = 0.0
-projectiles = []
 
 
 class Projectile:
@@ -53,8 +52,8 @@ class Projectile:
         return False
 
 
-def cast_rays(screen):
-    global projectiles
+def cast_rays(screen, projectiles):
+    z_buffer = [DEPTH] * SCREEN_WIDTH  # Initialize Z-buffer for depth shading
 
     for x in range(SCREEN_WIDTH):
         ray_angle = (player_angle - FOV / 2.0) + (x / SCREEN_WIDTH) * FOV
@@ -86,33 +85,54 @@ def cast_rays(screen):
                 color = (0, 0, 0)  # Sky
             elif y >= ceiling and y < floor:
                 shade = 255 if boundary else 255 - int(distance_to_wall * 15)
-                color = (shade, 0, 0)  # Wall
+                color = (shade, shade, shade)  # Wall
             else:
                 color = (50, 50, 50)  # Ground
 
             screen.set_at((x, y), color)
 
+        z_buffer[x] = distance_to_wall
+
     # Draw projectiles
     for proj in projectiles:
-        print(proj.x)
-        proj_screen_x = (
-            int((proj.x - player_x) / DEPTH * SCREEN_WIDTH / 2) + SCREEN_WIDTH // 2
-        )
-        proj_screen_y = (
-            int((proj.y - player_y) / DEPTH * SCREEN_HEIGHT / 2) + SCREEN_HEIGHT // 2
-        )
-        if 0 <= proj_screen_x < SCREEN_WIDTH and 0 <= proj_screen_y < SCREEN_HEIGHT:
-            screen.set_at((proj_screen_x, proj_screen_y), (255, 0, 0))
+        proj_dist = math.sqrt((proj.x - player_x) ** 2 + (proj.y - player_y) ** 2)
+        proj_angle = math.atan2(proj.y - player_y, proj.x - player_x) - player_angle
+
+        while proj_angle < -math.pi:
+            proj_angle += 2 * math.pi
+        while proj_angle > math.pi:
+            proj_angle -= 2 * math.pi
+
+        if -FOV / 2 <= proj_angle <= FOV / 2 and proj_dist < DEPTH:
+            proj_height = int(SCREEN_HEIGHT / proj_dist)
+            proj_width = int(
+                proj_height * (SCREEN_WIDTH / SCREEN_HEIGHT)
+            )  # Adjust width for cube appearance
+            proj_ceiling = int(SCREEN_HEIGHT / 2.0 - proj_height / 2)
+            proj_floor = proj_ceiling + proj_height
+            proj_screen_x = int((proj_angle + FOV / 2.0) * SCREEN_WIDTH / FOV)
+
+            if 0 <= proj_screen_x < SCREEN_WIDTH:
+                for x in range(
+                    proj_screen_x - proj_width // 2, proj_screen_x + proj_width // 2
+                ):
+                    if 0 <= x < SCREEN_WIDTH and proj_dist < z_buffer[x]:
+                        for y in range(proj_ceiling, proj_floor):
+                            if 0 <= y < SCREEN_HEIGHT:
+                                color = (255, 0, 0)  # Projectile color
+                                screen.set_at((x, y), color)
+                        z_buffer[x] = proj_dist
 
 
 def game_loop():
-    global player_x, player_y, player_angle, projectiles
+    global player_x, player_y, player_angle
 
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption("Raycaster")
 
     clock = pygame.time.Clock()
+    projectiles = []
 
     running = True
     while running:
@@ -148,7 +168,7 @@ def game_loop():
                 projectiles.remove(proj)
 
         screen.fill((0, 0, 0))
-        cast_rays(screen)
+        cast_rays(screen, projectiles)
         pygame.display.flip()
 
         clock.tick(60)
