@@ -25,10 +25,21 @@ MAP_WIDTH = len(WORLD_MAP[0])
 MAP_HEIGHT = len(WORLD_MAP)
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
-FOV = math.pi / 4  # 45 degrees FOV
-DEPTH = 16  # Maximum depth to render
+
+FOV = math.pi / 4
+""" Field of view, the bigger the number the more you can see,
+but slower the rendering will be """
+
+DEPTH = 16
+""" Maximum depth to render, the bigger the number
+the more distant objects will be rendered, but slower """
+
 SPEED = 0.25
 PROJECTILE_SPEED = 0.2
+
+RENDER_RESOLUTION = 0.01
+""" Resolution of the rendering, the smaller
+the better, but slower """
 
 player_x = 8.0
 player_y = 10.0
@@ -38,6 +49,7 @@ player_angle = 0.0
 def cast_rays(screen):
     for x in range(SCREEN_WIDTH):
         ray_angle = (player_angle - FOV / 2.0) + (x / SCREEN_WIDTH) * FOV
+
         distance_to_wall = 0.0
         hit_wall = False
         boundary = False
@@ -45,18 +57,22 @@ def cast_rays(screen):
         eye_x = math.sin(ray_angle)
         eye_y = math.cos(ray_angle)
 
+        # iterates trying to find an object at this X coordinate
+        # stops at the maximum depth or when it hits a wall (object)
         while not hit_wall and distance_to_wall < DEPTH:
-            distance_to_wall += 0.1
+            distance_to_wall += RENDER_RESOLUTION
             test_x = int(player_x + eye_x * distance_to_wall)
             test_y = int(player_y + eye_y * distance_to_wall)
 
+            # checks if the ray is out of bounds
             if test_x < 0 or test_x >= MAP_WIDTH or test_y < 0 or test_y >= MAP_HEIGHT:
                 hit_wall = True
                 distance_to_wall = DEPTH
-            else:
-                if WORLD_MAP[test_y][test_x] == "#":
-                    hit_wall = True
-                    boundary = True  # Simple boundary check
+
+            # checks if the ray hit a wall
+            elif WORLD_MAP[test_y][test_x] == "#":
+                hit_wall = True
+                boundary = True
 
         ceiling = int(SCREEN_HEIGHT / 2.0 - SCREEN_HEIGHT / distance_to_wall)
         floor = SCREEN_HEIGHT - ceiling
