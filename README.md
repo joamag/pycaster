@@ -1,2 +1,3 @@
-# pyycaster
-Simple raycaster engine written in Python
+# PyCaster
+
+Simple [Ray Casting](https://en.wikipedia.org/wiki/Ray_casting) engine written in Python.
