@@ -1,0 +1,8 @@
+*.pyc
+
+.DS_Store
+
+/.vscode/settings.json
+
+/.env
+/.venv
